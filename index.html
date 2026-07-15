@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VividGIF - Client-Side Video to GIF Converter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Gifshot JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-teal-500/30 selection:text-teal-300">
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <svg class="w-8 h-8 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">VividGIF</h1>
+                    <p class="text-xs text-slate-400">High-performance client-side Video to GIF Converter</p>
+                </div>
+            </div>
+            <div class="text-xs font-semibold text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 shadow-sm flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Local & Secure</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full flex flex-col items-center">
+        <!-- Main Content Grid -->
+        <div class="w-full max-w-5xl space-y-6">
+            <!-- Dropzone / File Upload -->
+            <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-teal-500/80 bg-slate-900/40 rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 hover:shadow-[0_0_20px_rgba(20,184,166,0.05)]">
+                <input type="file" id="video-input" accept="video/*" class="hidden" />
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="p-4 bg-slate-800/80 rounded-full border border-slate-750">
+                        <svg class="w-10 h-10 text-slate-400 hover:text-teal-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-lg font-semibold text-slate-200">Drag & drop your video here</p>
+                        <p class="text-sm text-slate-400">Or click to browse from files</p>
+                    </div>
+                    <p class="text-xs text-slate-500">Supports MP4, WebM, OGG, and other browser-supported formats</p>
+                </div>
+            </div>
+
+            <!-- Workspace Section (Hidden by Default) -->
+            <div id="workspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                <!-- Left Column: Video and Controls -->
+                <div class="lg:col-span-7 space-y-6">
+                    <!-- Video Card -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                        <div class="p-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-300 flex items-center space-x-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+                                <span>Video Preview</span>
+                            </span>
+                            <span id="video-info" class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">--:--</span>
+                        </div>
+                        <div class="relative aspect-video bg-black flex items-center justify-center">
+                            <video id="video-player" class="w-full h-full max-h-[450px]" controls preload="auto"></video>
+                        </div>
+                    </div>
+
+                    <!-- Range Trimming & Timing Info -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                        <h3 class="text-sm font-semibold tracking-wider text-slate-400 uppercase">Trim & Speed Configuration</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="start-time" class="block text-xs font-medium text-slate-400 mb-1.5">Start Time (seconds)</label>
+                                <div class="flex space-x-2">
+                                    <input type="number" id="start-time" min="0" step="0.1" value="0" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                    <button id="set-start-btn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 rounded-lg border border-slate-750 transition active:scale-95" title="Set to current playback time">Current</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="end-time" class="block text-xs font-medium text-slate-400 mb-1.5">End Time (seconds)</label>
+                                <div class="flex space-x-2">
+                                    <input type="number" id="end-time" min="0" step="0.1" value="5" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                    <button id="set-end-btn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 rounded-lg border border-slate-750 transition active:scale-95" title="Set to current playback time">Current</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time calculation readout -->
+                        <div class="pt-2 border-t border-slate-800/80 flex justify-between text-xs text-slate-400">
+                            <span>Selected duration: <strong id="duration-readout" class="text-teal-400">0s</strong></span>
+                            <span>Estimated frames: <strong id="frames-readout" class="text-teal-400">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Configurations and Progress -->
+                <div class="lg:col-span-5 space-y-6">
+                    <!-- Config Options -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <h2 class="text-base font-bold text-slate-100">GIF Settings</h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Custom Width/Height -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="gif-width" class="block text-xs font-medium text-slate-400 mb-1.5">Output Width (px)</label>
+                                    <input type="number" id="gif-width" min="50" step="1" value="400" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div>
+                                    <label for="gif-height" class="block text-xs font-medium text-slate-400 mb-1.5">Output Height (px)</label>
+                                    <input type="number" id="gif-height" min="50" step="1" value="300" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                            </div>
+
+                            <!-- Frame Rate (FPS) -->
+                            <div>
+                                <label for="gif-fps" class="block text-xs font-medium text-slate-400 mb-1.5">Frame Rate (FPS)</label>
+                                <select id="gif-fps" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                    <option value="5">5 FPS (Low quality, fast)</option>
+                                    <option value="10" selected>10 FPS (Balanced)</option>
+                                    <option value="15">15 FPS (Smooth)</option>
+                                    <option value="20">20 FPS (High detail)</option>
+                                </select>
+                            </div>
+
+                            <!-- Quality Option -->
+                            <div>
+                                <label for="gif-quality" class="block text-xs font-medium text-slate-400 mb-1.5">Quality (Sampling Factor)</label>
+                                <select id="gif-quality" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                    <option value="20">Fast Preview (Lower detail)</option>
+                                    <option value="10" selected>Standard (Recommended)</option>
+                                    <option value="5">High Quality (Slower)</option>
+                                    <option value="1">Perfect Palette (Extremely slow)</option>
+                                </select>
+                                <p class="text-[10px] text-slate-500 mt-1">Lower sampling factor yields superior color gradients but increases processing duration.</p>
+                            </div>
+
+                            <!-- Custom Text Overlay -->
+                            <div>
+                                <label for="gif-text" class="block text-xs font-medium text-slate-400 mb-1.5">Custom Text Overlay</label>
+                                <input type="text" id="gif-text" placeholder="e.g. Meme captions, watermark" class="w-full bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                            </div>
+                        </div>
+
+                        <!-- Action Button & Convert Progress -->
+                        <div class="pt-4 border-t border-slate-800 space-y-4">
+                            <button id="convert-btn" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 font-semibold text-slate-950 py-3 rounded-xl transition duration-250 active:scale-[0.98] shadow-lg flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+                                </svg>
+                                <span>Generate GIF Animation</span>
+                            </button>
+
+                            <!-- Progress Display -->
+                            <div id="progress-container" class="hidden space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <span id="progress-status" class="text-slate-400 font-medium">Extracting & encoding...</span>
+                                    <span id="progress-percent" class="text-teal-400 font-bold">0%</span>
+                                </div>
+                                <div class="w-full h-2.5 bg-slate-850 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="progress-bar" class="w-0 h-full bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full transition-all duration-150"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generated Output display -->
+                    <div id="output-card" class="hidden bg-slate-900/60 border border-teal-900/60 rounded-2xl p-6 space-y-4 shadow-[0_0_25px_rgba(20,184,166,0.06)] transition-all duration-300">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                            <h2 class="text-base font-bold text-slate-100">GIF Render Complete</h2>
+                        </div>
+
+                        <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center relative p-2">
+                            <img id="gif-output" class="max-w-full max-h-64 rounded shadow-md" alt="Generated GIF" />
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>Dimensions: <strong id="output-dim-readout" class="text-slate-300">0x0</strong></span>
+                            <span>File Size: <strong id="output-size-readout" class="text-slate-300">Calculating...</strong></span>
+                        </div>
+
+                        <a id="download-btn" download="vividgif-output.gif" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold py-2.5 rounded-xl transition duration-200 active:scale-[0.98] shadow-md flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download GIF</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-slate-900 bg-slate-950/80 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p>&copy; 2026 VividGIF. Built securely & entirely inside your browser sandbox.</p>
+            <div class="flex space-x-4">
+                <span class="hover:text-slate-400 transition cursor-help" title="Gifshot by Yahoo">Gifshot Engine</span>
+                <span class="text-slate-700">|</span>
+                <span class="hover:text-slate-400 transition cursor-help" title="No backend server required">Zero-Server footprint</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript logic -->
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const videoInput = document.getElementById('video-input');
+        const workspace = document.getElementById('workspace');
+        const videoPlayer = document.getElementById('video-player');
+        const videoInfo = document.getElementById('video-info');
+
+        const startTimeInput = document.getElementById('start-time');
+        const endTimeInput = document.getElementById('end-time');
+        const setStartBtn = document.getElementById('set-start-btn');
+        const setEndBtn = document.getElementById('set-end-btn');
+
+        const durationReadout = document.getElementById('duration-readout');
+        const framesReadout = document.getElementById('frames-readout');
+
+        const gifWidth = document.getElementById('gif-width');
+        const gifHeight = document.getElementById('gif-height');
+        const gifFps = document.getElementById('gif-fps');
+        const gifQuality = document.getElementById('gif-quality');
+        const gifText = document.getElementById('gif-text');
+
+        const convertBtn = document.getElementById('convert-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressStatus = document.getElementById('progress-status');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressBar = document.getElementById('progress-bar');
+
+        const outputCard = document.getElementById('output-card');
+        const gifOutput = document.getElementById('gif-output');
+        const outputDimReadout = document.getElementById('output-dim-readout');
+        const outputSizeReadout = document.getElementById('output-size-readout');
+        const downloadBtn = document.getElementById('download-btn');
+
+        let videoFile = null;
+
+        // Click to trigger input
+        dropzone.addEventListener('click', () => videoInput.click());
+
+        // Drag and drop handlers
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-teal-500', 'bg-slate-900/80');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-teal-500', 'bg-slate-900/80');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-teal-500', 'bg-slate-900/80');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleVideoSelect(files[0]);
+            }
+        });
+
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleVideoSelect(e.target.files[0]);
+            }
+        });
+
+        function handleVideoSelect(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('Please upload a valid video file.');
+                return;
+            }
+            videoFile = file;
+            const url = URL.createObjectURL(file);
+            videoPlayer.src = url;
+
+            dropzone.classList.add('hidden');
+            workspace.classList.remove('hidden');
+        }
+
+        // Once video is loaded
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            const duration = videoPlayer.duration;
+            videoInfo.textContent = `${videoPlayer.videoWidth}x${videoPlayer.videoHeight} | ${duration.toFixed(1)}s`;
+
+            // Set input suggestions
+            startTimeInput.max = duration;
+            endTimeInput.max = duration;
+            endTimeInput.value = Math.min(5, duration).toFixed(1);
+
+            gifWidth.value = videoPlayer.videoWidth > 800 ? Math.round(videoPlayer.videoWidth / 2) : videoPlayer.videoWidth;
+            gifHeight.value = videoPlayer.videoHeight > 800 ? Math.round(videoPlayer.videoHeight / 2) : videoPlayer.videoHeight;
+
+            updateEstimates();
+        });
+
+        // Set markers to current time
+        setStartBtn.addEventListener('click', () => {
+            startTimeInput.value = videoPlayer.currentTime.toFixed(1);
+            updateEstimates();
+        });
+
+        setEndBtn.addEventListener('click', () => {
+            endTimeInput.value = videoPlayer.currentTime.toFixed(1);
+            updateEstimates();
+        });
+
+        [startTimeInput, endTimeInput, gifFps].forEach(input => {
+            input.addEventListener('input', updateEstimates);
+        });
+
+        function updateEstimates() {
+            const start = parseFloat(startTimeInput.value) || 0;
+            const end = parseFloat(endTimeInput.value) || 0;
+            const fps = parseInt(gifFps.value) || 10;
+
+            const diff = Math.max(0, end - start);
+            durationReadout.textContent = `${diff.toFixed(1)}s`;
+
+            const frames = Math.round(diff * fps);
+            framesReadout.textContent = frames;
+        }
+
+        // Conversion logic
+        convertBtn.addEventListener('click', () => {
+            if (!videoFile) return;
+
+            const start = parseFloat(startTimeInput.value) || 0;
+            const end = parseFloat(endTimeInput.value) || 0;
+            const width = parseInt(gifWidth.value) || 400;
+            const height = parseInt(gifHeight.value) || 300;
+            const fps = parseInt(gifFps.value) || 10;
+            const quality = parseInt(gifQuality.value) || 10;
+            const text = gifText.value.trim();
+
+            const diff = Math.max(0.1, end - start);
+            const numFrames = Math.round(diff * fps);
+            const interval = 1 / fps; // 1 second divided by frames per second
+
+            // Reset Output Display
+            outputCard.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            convertBtn.disabled = true;
+            convertBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressStatus.textContent = 'Extracting & processing frames...';
+
+            // Setup custom file blob array for gifshot.createGIF if we pass actual video URL
+            const blobUrl = URL.createObjectURL(videoFile);
+
+            gifshot.createGIF({
+                video: [blobUrl],
+                gifWidth: width,
+                gifHeight: height,
+                numFrames: numFrames,
+                interval: interval,
+                offset: start,
+                sampleInterval: quality,
+                text: text,
+                numWorkers: navigator.hardwareConcurrency || 4,
+                progressCallback: (captureProgress) => {
+                    const percent = Math.round(captureProgress * 100);
+                    progressBar.style.width = `${percent}%`;
+                    progressPercent.textContent = `${percent}%`;
+                    if (percent >= 100) {
+                        progressStatus.textContent = 'Rendering GIF animation...';
+                    } else {
+                        progressStatus.textContent = `Analyzing frames: ${percent}%`;
+                    }
+                }
+            }, (obj) => {
+                convertBtn.disabled = false;
+                convertBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                progressContainer.classList.add('hidden');
+                URL.revokeObjectURL(blobUrl);
+
+                if (obj.error) {
+                    alert(`Error generating GIF: ${obj.errorMsg}`);
+                    return;
+                }
+
+                // Show generated GIF
+                gifOutput.src = obj.image;
+                outputDimReadout.textContent = `${width}x${height}`;
+
+                // Calculate file size from base64 string
+                const base64Length = obj.image.length - (obj.image.indexOf(',') + 1);
+                const fileSizeBytes = (base64Length * 3) / 4;
+                const fileSizeMB = fileSizeBytes / (1024 * 1024);
+                if (fileSizeMB >= 1) {
+                    outputSizeReadout.textContent = `${fileSizeMB.toFixed(2)} MB`;
+                } else {
+                    outputSizeReadout.textContent = `${(fileSizeBytes / 1024).toFixed(1)} KB`;
+                }
+
+                downloadBtn.href = obj.image;
+                outputCard.classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
